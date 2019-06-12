@@ -86,7 +86,10 @@ result_t util_base::values(v8::Local<v8::Value> v, v8::Local<v8::Array>& retVal)
 
         for (i = 0; i < len; i++) {
             v8::Local<v8::Value> key = keys->Get(i);
-            arr->Set(n++, obj->Get(key));
+            v8::Local<v8::Value> value = obj->Get(key);
+            if(value.IsEmpty())
+                return CALL_E_JAVASCRIPT;
+            arr->Set(n++, value);
         }
 
         retVal = arr;
@@ -174,7 +177,10 @@ result_t util_base::extend(v8::Local<v8::Value> v, OptArgs objs,
 
         for (j = 0; j < len; j++) {
             v8::Local<v8::Value> key = keys->Get(j);
-            obj->Set(key, obj1->Get(key));
+            v8::Local<v8::Value> value = obj1->Get(key);
+            if(value.IsEmpty())
+                return CALL_E_JAVASCRIPT;
+            obj->Set(key, value);
         }
     }
 
@@ -215,14 +221,22 @@ result_t util_base::pick(v8::Local<v8::Value> v, OptArgs objs,
             for (j = 0; j < len; j++) {
                 v8::Local<v8::Value> k = arr->Get(j);
 
-                if (obj->Has(k))
-                    obj1->Set(k, obj->Get(k));
+                if (obj->Has(k)){
+                    v8::Local<v8::Value> v = obj->Get(k);
+                    if(v.IsEmpty())
+                        return CALL_E_JAVASCRIPT;
+                    obj1->Set(k, v);
+                }
             }
         } else {
             v8::Local<v8::Value> k = o;
 
-            if (obj->Has(k))
-                obj1->Set(k, obj->Get(k));
+            if (obj->Has(k)){
+                v8::Local<v8::Value> v = obj->Get(k);
+                if(v.IsEmpty())
+                    return CALL_E_JAVASCRIPT;
+                obj1->Set(k, v);
+            }
         }
     }
 
@@ -281,8 +295,12 @@ result_t util_base::omit(v8::Local<v8::Value> v, OptArgs keys,
     for (i = 0; i < len; i++) {
         v8::Local<v8::Value> key = keys1->Get(i);
 
-        if (_map.find(ToCString(v8::String::Utf8Value(key))) == _map.end())
-            obj1->Set(key, obj->Get(key));
+        if (_map.find(ToCString(v8::String::Utf8Value(key))) == _map.end()){
+            v8::Local<v8::Value> value = obj->Get(key);
+            if(value.IsEmpty())
+                return CALL_E_JAVASCRIPT;
+            obj1->Set(key, value);
+        }
     }
 
     retVal = obj1;
@@ -669,12 +687,17 @@ result_t util_base::each(v8::Local<v8::Value> list, v8::Local<v8::Function> iter
 
     if (IsEmpty(v)) {
         v8::Local<v8::Array> keys = o->GetPropertyNames();
-        int32_t len = keys->Length();
+        int32_t len = 0;
+        if(!keys.IsEmpty())
+            len = keys->Length();
+            
         int32_t i;
 
         for (i = 0; i < len; i++) {
             args[1] = keys->Get(i);
             args[0] = o->Get(args[1]);
+            if(args[0].IsEmpty() || args[1].IsEmpty())
+                return CALL_E_JAVASCRIPT;
 
             v = iterator->Call(context, 3, args);
             if (v.IsEmpty())
@@ -688,6 +711,8 @@ result_t util_base::each(v8::Local<v8::Value> list, v8::Local<v8::Function> iter
         for (i = 0; i < len; i++) {
             args[1] = v8::Int32::New(isolate->m_isolate, i);
             args[0] = o->Get(args[1]);
+            if(args[0].IsEmpty() || args[1].IsEmpty())
+                return CALL_E_JAVASCRIPT;
 
             v = iterator->Call(context, 3, args);
             if (v.IsEmpty())
@@ -720,12 +745,16 @@ result_t util_base::map(v8::Local<v8::Value> list, v8::Local<v8::Function> itera
 
     if (IsEmpty(v)) {
         v8::Local<v8::Array> keys = o->GetPropertyNames();
-        int32_t len = keys->Length();
+        int32_t len = 0;
+        if(!keys.IsEmpty())
+            len = keys->Length();
         int32_t i;
 
         for (i = 0; i < len; i++) {
             args[1] = keys->Get(i);
             args[0] = o->Get(args[1]);
+            if(args[0].IsEmpty() || args[1].IsEmpty())
+                return CALL_E_JAVASCRIPT;
 
             v = iterator->Call(context, 3, args);
             if (v.IsEmpty())
@@ -741,6 +770,8 @@ result_t util_base::map(v8::Local<v8::Value> list, v8::Local<v8::Function> itera
         for (i = 0; i < len; i++) {
             args[1] = v8::Int32::New(isolate->m_isolate, i);
             args[0] = o->Get(args[1]);
+            if(args[0].IsEmpty() || args[1].IsEmpty())
+                return CALL_E_JAVASCRIPT;
 
             v = iterator->Call(context, 3, args);
             if (v.IsEmpty())
@@ -773,13 +804,18 @@ result_t util_base::reduce(v8::Local<v8::Value> list, v8::Local<v8::Function> it
 
     if (IsEmpty(v)) {
         v8::Local<v8::Array> keys = o->GetPropertyNames();
-        int32_t len = keys->Length();
+        int32_t len = 0;
+        if(!keys.IsEmpty())
+            len = keys->Length();
+
         int32_t i;
 
         for (i = 0; i < len; i++) {
             args[2] = keys->Get(i);
             args[1] = o->Get(args[2]);
-
+            if(args[1].IsEmpty() || args[2].IsEmpty())
+                return CALL_E_JAVASCRIPT;
+            
             args[0] = memo;
 
             memo = iterator->Call(context, 4, args);
@@ -794,6 +830,8 @@ result_t util_base::reduce(v8::Local<v8::Value> list, v8::Local<v8::Function> it
         for (i = 0; i < len; i++) {
             args[2] = v8::Int32::New(isolate->m_isolate, i);
             args[1] = o->Get(args[2]);
+            if(args[1].IsEmpty() || args[2].IsEmpty())
+                return CALL_E_JAVASCRIPT;
 
             args[0] = memo;
 
