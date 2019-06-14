@@ -2,13 +2,13 @@ var test = require("test");
 test.setup();
 
 const arr = new Proxy(['one', 'two', 'three'], {
-    get: function (target, name) {
+    get: function(target, name) {
         throw 'I am exception';
     }
 });
 
 const arrlength = new Proxy(['one', 'two', 'three'], {
-    get: function (target, name) {
+    get: function(target, name) {
         if (name == "length") {
             return target[name];
         }
@@ -22,11 +22,20 @@ const obj = {
     }
 };
 
+const obj1 = new Proxy({}, {
+    get: function(target, name) {
+        if (name == "length") {
+            return 10;
+        }
+        throw 'I am exception';
+    }
+});
+
 describe('getter throw', () => {
 
     function checkthrow(cases) {
         cases.forEach((fn) => {
-            assert.throws(function () {
+            assert.throws(function() {
                 fn();
             });
 
@@ -39,7 +48,7 @@ describe('getter throw', () => {
     }
 
     assert.checkthrow = (fn) => {
-        assert.throws(function () {
+        assert.throws(function() {
             fn();
         });
 
@@ -51,15 +60,15 @@ describe('getter throw', () => {
     }
 
     it('assert', () => {
-        assert.checkthrow(function () {
+        assert.checkthrow(function() {
             assert.deepEqual(obj, obj);
         });
 
-        assert.checkthrow(function () {
+        assert.checkthrow(function() {
             assert.deepEqual([obj], [obj]);
         });
 
-        assert.checkthrow(function () {
+        assert.checkthrow(function() {
             assert.deepEqual([obj.abc], [obj.abc]);
         });
 
@@ -69,7 +78,7 @@ describe('getter throw', () => {
         //     }, "a.abc.efg");
         // });
 
-        assert.checkthrow(function () {
+        assert.checkthrow(function() {
             assert.propertyVal(obj, "abc", 'ball');
         });
 
@@ -82,7 +91,7 @@ describe('getter throw', () => {
 
     it('json format', () => {
         assert.property(obj, 'abc');
-        assert.throws(function () {
+        assert.throws(function() {
             assert.propertyVal(obj, 'region', 'hangzhou');
         });
     });
@@ -113,31 +122,34 @@ describe('getter throw', () => {
                 util.omit(obj, ["x"])
             },
             () => {
-                util.each(obj, (num, i) => {})
+                util.omit(obj, arr)
             },
             () => {
-                util.each(arr, (num, i) => {})
+                util.each(obj, (num, i) => { })
             },
             () => {
-                util.each(arrlength, (num, i) => {})
+                util.each(arr, (num, i) => { })
             },
             () => {
-                util.map(obj, () => {})
+                util.each(arrlength, (num, i) => { })
             },
             () => {
-                util.map(arr, () => {})
+                util.map(obj, () => { })
             },
             () => {
-                util.map(arrlength, () => {})
+                util.map(arr, () => { })
             },
             () => {
-                util.reduce(obj, () => {}, 0);
+                util.map(arrlength, () => { })
             },
             () => {
-                util.reduce(arr, () => {}, 0);
+                util.reduce(obj, () => { }, 0);
             },
             () => {
-                util.reduce(arrlength, () => {}, 0);
+                util.reduce(arr, () => { }, 0);
+            },
+            () => {
+                util.reduce(arrlength, () => { }, 0);
             },
         ]
         checkthrow(cases);
