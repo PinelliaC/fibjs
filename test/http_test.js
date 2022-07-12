@@ -2089,6 +2089,12 @@ describe("http", () => {
                         "test_header": "header"
                     }
                 }).headers['test_header'], 'foobar');
+
+                assert.equal(http.request('HEAD', "https://localhost:" + (8883 + base_port) + "/request:", {
+                    headers: {
+                        "test_header": "header"
+                    }
+                }).headers['Content-Length'], 15);
             });
 
             it("async", (done) => {

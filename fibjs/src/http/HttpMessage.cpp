@@ -224,15 +224,14 @@ result_t HttpMessage::readFrom(Stream_base* stm, AsyncEvent* ac)
                         return CHECK_ERROR(Runtime::setError("HttpMessage: unknown transfer-encoding."));
 
                     m_bChunked = true;
-                } else {
-                    result_t hr = m_pThis->addHeader(m_strLine);
-                    if (hr < 0)
-                        return hr;
-
-                    m_headCount++;
-                    if (m_headCount > m_pThis->m_maxHeadersCount)
-                        return CHECK_ERROR(Runtime::setError("HttpMessage: too many headers."));
                 }
+                result_t hr = m_pThis->addHeader(m_strLine);
+                if (hr < 0)
+                    return hr;
+
+                m_headCount++;
+                if (m_headCount > m_pThis->m_maxHeadersCount)
+                    return CHECK_ERROR(Runtime::setError("HttpMessage: too many headers."));
 
                 return m_stm->readLine(HTTP_MAX_LINE, m_strLine, this);
             }
