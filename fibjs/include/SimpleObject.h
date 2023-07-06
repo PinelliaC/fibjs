@@ -65,8 +65,18 @@ public:
         if (it == m_keys.end())
             return CALL_RETURN_NULL;
 
-        m_values[it->second].m_val.clear();
+        m_values.erase(m_values.begin() + it->second);
         m_keys.erase(it);
+
+        for (it = m_keys.begin(); it != m_keys.end(); it++) {
+            if (it->second > it->second)
+                it->second--;
+        }
+
+        for (int32_t i = 0; i < (int32_t)m_values.size(); i++) {
+            Value& v = m_values[i];
+            v.m_pos = m_keys.find(v.m_pos->first);
+        }
         return 0;
     }
 
