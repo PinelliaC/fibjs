@@ -111,7 +111,7 @@ public:
     }
 } s_color_initer;
 
-exlib::string json_format(v8::Local<v8::Value> obj, bool color, int32_t depth);
+exlib::string json_format(v8::Local<v8::Value> obj, bool color, int32_t depth, int32_t maxArrayLength);
 exlib::string table_format(v8::Local<v8::Value> obj, v8::Local<v8::Array> fields, bool color, bool encode_string);
 result_t util_format(exlib::string fmt, OptArgs args, bool color, exlib::string& retVal);
 
