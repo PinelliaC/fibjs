@@ -44,16 +44,33 @@ public:
     int32_t mode;
 };
 
-void string_format(StringBuffer& strBuffer, v8::Local<v8::Value> v, bool color)
+void string_format(StringBuffer& strBuffer, v8::Local<v8::Value> v, bool color, int32_t maxStringLength)
 {
     exlib::string s;
     json_base::encode(v, s);
+    exlib::wstring32 str32 = utf8to32String(s);
+
+    // remove quotes at the beginning and end
+    int32_t str32_length = str32.length() - 2;
+    if (str32_length > maxStringLength) {
+        std::string ellipsis = "\"... ";
+        if (maxStringLength <= 0) {
+            ellipsis += str32_length > 1 ? std::to_string(str32_length) + " more characters" : "1 more character";
+            s = "\"";
+        } else {
+            int32_t cnt = str32_length - maxStringLength;
+            ellipsis += (cnt > 1) ? std::to_string(cnt) + " more characters" : "1 more character";
+            str32 = str32.substr(0, maxStringLength + 1);
+            s = utf32to8String(str32);
+        }
+        s.append(ellipsis);
+    }
     strBuffer.append(color_string(COLOR_GREEN, s, color));
 }
 
 #define MAX_BUFFER_ITEM 50
 
-exlib::string json_format(v8::Local<v8::Value> obj, bool color, int32_t depth, int32_t maxArrayLength)
+exlib::string json_format(v8::Local<v8::Value> obj, bool color, int32_t depth, int32_t maxArrayLength, int32_t maxStringLength)
 {
     StringBuffer strBuffer;
 
@@ -80,9 +97,9 @@ exlib::string json_format(v8::Local<v8::Value> obj, bool color, int32_t depth, i
             strBuffer.append(color_string(COLOR_YELLOW, isolate->toString(v), color));
         else if (v->IsBigInt() || v->IsBigIntObject())
             strBuffer.append(color_string(COLOR_YELLOW, isolate->toString(v) + 'n', color));
-        else if (v->IsString() || v->IsStringObject())
-            string_format(strBuffer, v, color);
-        else if (v->IsRegExp()) {
+        else if (v->IsString() || v->IsStringObject()) {
+            string_format(strBuffer, v, color, maxStringLength);
+        } else if (v->IsRegExp()) {
             exlib::string s;
             v8::Local<v8::RegExp> re = v8::Local<v8::RegExp>::Cast(v);
             v8::Local<v8::String> src = re->GetSource();
@@ -337,10 +354,10 @@ exlib::string json_format(v8::Local<v8::Value> obj, bool color, int32_t depth, i
 
                 int32_t cnt = it->len - it->pos;
                 if (cnt > 1) {
-                    snprintf(str_buf, sizeof(str_buf), "%d more items", cnt);
+                    snprintf(str_buf, sizeof(str_buf), "... %d more items", cnt);
                     strBuffer.append(str_buf);
                 } else
-                    strBuffer.append("1 more item");
+                    strBuffer.append("... 1 more item");
 
                 it->pos = it->len;
             }
@@ -370,8 +387,7 @@ exlib::string json_format(v8::Local<v8::Value> obj, bool color, int32_t depth, i
 
             if (!it->obj.IsEmpty()) {
                 TryCatch try_catch;
-
-                string_format(strBuffer, v, false);
+                string_format(strBuffer, v, false, DEFAULT_MAX_STRING_LENGTH);
 
                 if (it->obj->IsMap()) {
                     strBuffer.append(" => ");
@@ -432,7 +448,7 @@ result_t util_format(exlib::string fmt, OptArgs args, bool color, exlib::string&
                         v8::Local<v8::Value> v = v8::Number::New(isolate->m_isolate, (int32_t)n);
 
                         exlib::string s;
-                        s = json_format(v, color, DEFAULT_DEPTH, DEFAULT_MAX_ARRAY_LENGTH);
+                        s = json_format(v, color, DEFAULT_DEPTH, DEFAULT_MAX_ARRAY_LENGTH, DEFAULT_MAX_STRING_LENGTH);
                         retVal.append(s);
                     }
                 } else
@@ -441,7 +457,7 @@ result_t util_format(exlib::string fmt, OptArgs args, bool color, exlib::string&
             case 'j':
                 if (idx < argc) {
                     exlib::string s;
-                    s = json_format(args[idx++], color, DEFAULT_DEPTH, DEFAULT_MAX_ARRAY_LENGTH);
+                    s = json_format(args[idx++], color, DEFAULT_DEPTH, DEFAULT_MAX_ARRAY_LENGTH, DEFAULT_MAX_STRING_LENGTH);
                     retVal.append(s);
                 } else
                     retVal.append("%j", 2);
@@ -469,7 +485,7 @@ result_t util_format(exlib::string fmt, OptArgs args, bool color, exlib::string&
             retVal.append(isolate->toString(v));
         else {
             exlib::string s;
-            s = json_format(v, color, DEFAULT_DEPTH, DEFAULT_MAX_ARRAY_LENGTH);
+            s = json_format(v, color, DEFAULT_DEPTH, DEFAULT_MAX_ARRAY_LENGTH, DEFAULT_MAX_STRING_LENGTH);
 
             retVal.append(s);
         }
